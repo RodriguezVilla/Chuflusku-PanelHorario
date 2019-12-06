@@ -1,0 +1,5 @@
+La tarjeta SD debe estar formateada en FAT32.
+
+En la carpeta 01  se guardaran los sonidos del lunes, en la 02 el martes y así sucesivamente.
+
+Los archivos mp3 empezaran 001, 002 ... hasta el 00A

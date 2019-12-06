@@ -2,11 +2,20 @@
 #include <RTClib.h>
 #include <Adafruit_NeoPixel.h>
 
-/////////////////////////////////////
-// Chuflusku: Panel Horario
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// Chuflusku - Panel Horario
 // Rubén Rodríguez Villa
-// V1.0.0 -  05/12/2019
-/////////////////////////////////////
+// V1.0.0 - 05/12/2019
+// V1.1.0 - 06/12/2019
+//
+//  Funciones:
+//    - Cada pulsador reproduce sonidos distinto que varia en función del día de la semana que sea.
+//    - Una tira de leds indicara el día de la semana que es.
+//    - Un detector de movimiento activa tira de leds al percibir movimiento
+//
+//  Algunos sonidos de muestra se han obtenido de http://www.arasaac.org/creditos.php con la licencia 
+//  https://creativecommons.org/licenses/by-nc-sa/3.0/es/
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -91,18 +100,34 @@ RTC_DS3231 rtc;
 ////////////////////////////////////////
 // Leds
 ////////////////////////////////////////
-#define PIXEL_PIN 2    // Digital IO pin connected to the NeoPixels.
-#define PIXEL_COUNT 7  // Designamos cuantos pixeles tenemos en nuestra cinta led RGB
+#define TIRAS_LED_DIAS_SEMANA_PIN 2    // Digital IO pin connected to the NeoPixels.
+#define TIRAS_LED_DETECTOR_PIN 3
 
-Adafruit_NeoPixel pixels = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+#define TIRAS_LED_DIAS_SEMANA_CANTIDAD 7  // Designamos cuantos pixeles tenemos en nuestra cinta led RGB
+#define TIRAS_LED_DETECTOR_CATIDAD 13
 
-uint32_t off = pixels.Color(0,0,0);
-uint32_t rojoOscuro = pixels.Color(130,0,0);
-uint32_t rojoPuro = pixels.Color(255,0,0);
-uint32_t verdeOscuro = pixels.Color(0,130,0);
-uint32_t verdePuro = pixels.Color(0,255,0);
-uint32_t magenta = pixels.Color(255,0,255);
+Adafruit_NeoPixel tirasLedDiasSemana = Adafruit_NeoPixel(TIRAS_LED_DIAS_SEMANA_CANTIDAD, TIRAS_LED_DIAS_SEMANA_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel tirasLedDetector = Adafruit_NeoPixel(TIRAS_LED_DETECTOR_CATIDAD, TIRAS_LED_DETECTOR_PIN, NEO_GRB + NEO_KHZ800);
 
+uint32_t offDetector =    tirasLedDetector.Color(0,0,0);
+uint32_t rojoOscuro =     tirasLedDetector.Color(130,0,0);
+uint32_t rojoPuro =       tirasLedDetector.Color(255,0,0);
+
+uint32_t offDias =        tirasLedDiasSemana.Color(0,0,0);
+uint32_t verdeOscuro =    tirasLedDiasSemana.Color(0,130,0);
+uint32_t verdePuro =      tirasLedDiasSemana.Color(0,255,0);
+uint32_t magenta =        tirasLedDiasSemana.Color(255,0,255);
+uint32_t magentaOscuro =  tirasLedDiasSemana.Color(130,0,130);
+
+
+
+
+////////////////////////////////////////
+// Detector de movimiento
+////////////////////////////////////////
+#define PIN_PIR 4
+boolean sensorPIR;
+boolean lectura1PIR = false;
 
 ////////////////////////////////////////
 // Tiempo
@@ -142,11 +167,22 @@ void setup()
   pinMode(PUL_009, INPUT_PULLUP); 
   pinMode(PUL_010, INPUT_PULLUP);
 
+  // Defino Sensor PIR
+  pinMode(PIN_PIR, INPUT);
+
   Serial.begin(9600);
   mp3.begin(9600);
 
-  pixels.begin(); 
-  arrancandoLeds(PIXEL_COUNT, magenta);
+  sendCommand(CMD_PLAY_W_INDEX, 0x01);
+  delay(3000);
+
+  tirasLedDiasSemana.begin(); 
+  tirasLedDetector.begin();
+  
+  arrancandoLeds(magenta);
+  arrancandoLeds(magentaOscuro);
+
+  delay(500);
   
   if (!rtc.begin()) {
     Serial.println(F("Couldn't find RTC"));
@@ -159,7 +195,8 @@ void setup()
   }
 
   sendCommand(CMD_SEL_DEV, DEV_TF);
-  arrancandoLeds(PIXEL_COUNT, off);
+  arrancandoLeds(offDias);
+
 }
 
 
@@ -170,6 +207,7 @@ void loop()
 
 
   escuchandoPulsadores();
+  escuchandoPIR();
   
   char c = ' ';
 
@@ -190,15 +228,40 @@ void loop()
 
 //-----------------------------------
 // Rubén R. V.
-// 05/12/2019
+// 06/12/2019
 //-----------------------------------
-void arrancandoLeds(int numPixel,uint32_t color){
-  for(int i=0; i<numPixel; i++){
-    pixels.setPixelColor(i, color); // Brillo color
-    pixels.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
+void escuchandoPIR(){
+  sensorPIR = digitalRead(PIN_PIR);
+  if((sensorPIR == HIGH)&&(lectura1PIR == false)){
+    lectura1PIR = true;
+    Serial.println("Sensor Movimiento ON");
+    detectorLeds(rojoOscuro);
+//    sendCommand(CMD78589/99_PLAY_W_INDEX, 0x01);
+  } else if ((sensorPIR == LOW)&&(lectura1PIR == true)){
+    lectura1PIR = false;
+    Serial.println("Sensor Movimiento OFF");
+    detectorLeds(offDetector);
+  }
+}
+
+//-----------------------------------
+// Rubén R. V.
+// 05/12/2019 - 06/12/1019
+//-----------------------------------
+void arrancandoLeds(uint32_t color){
+  for(int i=0; i<TIRAS_LED_DIAS_SEMANA_CANTIDAD; i++){
+    tirasLedDiasSemana.setPixelColor(i, color); // Brillo color
+    tirasLedDiasSemana.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
     delay(100); // Pausa por un periodo de tiempo (en milisegundos).
   }
 }
+void detectorLeds(uint32_t color){
+  for(int i=0; i<TIRAS_LED_DETECTOR_CATIDAD; i++){
+    tirasLedDetector.setPixelColor(i, color); // Brillo color
+    tirasLedDetector.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
+  }
+}
+
 
 
 //-----------------------------------
@@ -206,19 +269,19 @@ void arrancandoLeds(int numPixel,uint32_t color){
 // 05/12/2019
 //-----------------------------------
 void ilimunarDiaSemana(){
-  for(int i=0; i<7; i++){
+  for(int i=0; i<TIRAS_LED_DIAS_SEMANA_CANTIDAD; i++){
     if(diaSemana != i){
-      pixels.setPixelColor(i, off);  
+      tirasLedDiasSemana.setPixelColor(i, offDias);  
     }else{
-      pixels.setPixelColor(i, verdeOscuro);  
+      tirasLedDiasSemana.setPixelColor(i, verdeOscuro);  
     }
-    pixels.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
+    tirasLedDiasSemana.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
   } 
 }
 //-----------------------------------
 // Rubén R. V.
 // 13/9/2019
-// Actualización 05/12/2019
+// Actualizaciónes: 05/12/2019, 06/12/2019
 //-----------------------------------
 void escuchandoPulsadores(){
 
@@ -226,9 +289,10 @@ void escuchandoPulsadores(){
   if(now.dayOfTheWeek()!= (diaSemanaIngles)){
     diaSemanaIngles = now.dayOfTheWeek();
     if(diaSemanaIngles==0){
-      
-    }
+      diaSemana =7;
+    }else {
     diaSemana = diaSemanaIngles-1;
+    }
   }
 
   ilimunarDiaSemana();
