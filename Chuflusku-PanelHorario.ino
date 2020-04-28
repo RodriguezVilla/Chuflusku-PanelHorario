@@ -5,8 +5,9 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // Chuflusku - Panel Horario
 // Rubén Rodríguez Villa
-// V1.0.0 - 05/12/2019
+// V1.1.1 - 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
 // V1.1.0 - 06/12/2019
+// V1.0.0 - 05/12/2019
 //
 //
 //  Funciones:
@@ -139,7 +140,6 @@ int diaSemana = 0;
 int diaSemanaIngles = 0;
 
 
-
 ////////////////////////////////////////
 // URI directorios - sonidos 
 ////////////////////////////////////////
@@ -200,7 +200,6 @@ void setup()
 
 }
 
-
 bool entroSoloUnaVez = false;
 
 void loop()
@@ -237,7 +236,6 @@ void escuchandoPIR(){
     lectura1PIR = true;
     Serial.println("Sensor Movimiento ON");
     detectorLeds(rojoOscuro);
-//    sendCommand(CMD78589/99_PLAY_W_INDEX, 0x01);
   } else if ((sensorPIR == LOW)&&(lectura1PIR == true)){
     lectura1PIR = false;
     Serial.println("Sensor Movimiento OFF");
@@ -283,6 +281,7 @@ void ilimunarDiaSemana(){
 // Rubén R. V.
 // 13/9/2019
 // Actualizaciónes: 05/12/2019, 06/12/2019
+// 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
 //-----------------------------------
 void escuchandoPulsadores(){
 
@@ -304,7 +303,7 @@ void escuchandoPulsadores(){
     
   Serial.println(daysOfTheWeek[diaSemana]);
   Serial.println(diaSemana);
-    sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][9]);
+    sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][0]);
     sendCommand(CMD_QUERY_VOLUME, 0x1E);
     entroSoloUnaVez = true;
   }
