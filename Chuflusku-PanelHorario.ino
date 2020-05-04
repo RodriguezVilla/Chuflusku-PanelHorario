@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // Chuflusku - Panel Horario
 // Rubén Rodríguez Villa
+// V1.1.2 - 04/05/2020 -> Ajustes en comentarios. Corrección Domingo.
 // V1.1.1 - 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
 // V1.1.0 - 06/12/2019
 // V1.0.0 - 05/12/2019
@@ -15,24 +16,22 @@
 //    - Una tira de leds indicara el día de la semana que es.
 //    - Un detector de movimiento activa tira de leds al percibir movimiento
 //
+//  Consideraciones Previas:
+//    - Si utiliza un modulo reloj en el que no estan fijada la fecha y hora,
+//      ver instruccciones de línea 192.
+//
 //  Algunos sonidos de muestra se han obtenido de http://www.arasaac.org/creditos.php con la licencia 
 //  https://creativecommons.org/licenses/by-nc-sa/3.0/es/
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Para la gestión de la reproducción de audio utilizamos codigo de  http://www.dx.com/p/uart-control-serial-mp3-music-player-module-for-arduino-avr-arm-pic-blue-silver-342439#.VfHyobPh5z0
 // Demo for the Serial MP3 Player Catalex (YX5300 chip)
 // Hardware: Serial MP3 Player *1
-// Board:  Arduino UNO
-// http://www.dx.com/p/uart-control-serial-mp3-music-player-module-for-arduino-avr-arm-pic-blue-silver-342439#.VfHyobPh5z0
 // Fuente base MP3 Base player:  https://joanruedapauweb.com/blog/index.php/2017/02/07/arduino-serial-mp3-player-yx5300-es/
-// Uncomment SoftwareSerial for Arduino Uno or Nano.
-// #include <SoftwareSerial.h>
-// #define ARDUINO_RX 5  //should connect to TX of the Serial MP3 Player module
-// #define ARDUINO_TX 6  //connect to RX of the module
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-//SoftwareSerial mp3(ARDUINO_RX, ARDUINO_TX);
 #define mp3 Serial3    // Connect the MP3 Serial Player to the Arduino MEGA Serial3 (14 TX3 -> RX, 15 RX3 -> TX)
 
 static int8_t Send_buf[8] = {0}; // Buffer for Send commands.  // BETTER LOCALLY
@@ -121,9 +120,6 @@ uint32_t verdePuro =      tirasLedDiasSemana.Color(0,255,0);
 uint32_t magenta =        tirasLedDiasSemana.Color(255,0,255);
 uint32_t magentaOscuro =  tirasLedDiasSemana.Color(130,0,130);
 
-
-
-
 ////////////////////////////////////////
 // Detector de movimiento
 ////////////////////////////////////////
@@ -139,7 +135,6 @@ String monthsNames[12] = { "Enero", "Febrero", "Marzo", "Abril", "Mayo",  "Junio
 int diaSemana = 0;
 int diaSemanaIngles = 0;
 
-
 ////////////////////////////////////////
 // URI directorios - sonidos 
 ////////////////////////////////////////
@@ -152,7 +147,6 @@ int16_t url[][10]={
                 {0x0601, 0x0602, 0x0603, 0x0604, 0x0605, 0x0606, 0x0607, 0x0608, 0x0609, 0x060A},
                 {0x0701, 0x0702, 0x0703, 0x0704, 0x0705, 0x0706, 0x0707, 0x0708, 0x0709, 0x070A}
 };
-
 
 void setup()
 {
@@ -194,6 +188,12 @@ void setup()
     // Fijar a fecha y hora de compilacion
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
+
+  // Si modulo de reloj no esta ajustado en fecha ni hora:
+  // PASO1: descomentar la siguiente línea y cargar código al arduino
+  //      rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // PASO2: Comentar la anterior línea y cargar código al arduino
+
 
   sendCommand(CMD_SEL_DEV, DEV_TF);
   arrancandoLeds(offDias);
@@ -281,6 +281,7 @@ void ilimunarDiaSemana(){
 // Rubén R. V.
 // 13/9/2019
 // Actualizaciónes: 05/12/2019, 06/12/2019
+// 04/05/2020 -> Corrección error del dia de la semana del domingo
 // 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
 //-----------------------------------
 void escuchandoPulsadores(){
@@ -288,12 +289,14 @@ void escuchandoPulsadores(){
   DateTime now = rtc.now();
   if(now.dayOfTheWeek()!= (diaSemanaIngles)){
     diaSemanaIngles = now.dayOfTheWeek();
-    if(diaSemanaIngles==0){
-      diaSemana =7;
-    }else {
-    diaSemana = diaSemanaIngles-1;
-    }
+  }else{
+      if(diaSemanaIngles==0){
+        diaSemana = 6;  // Determino el caso para el domingo
+      }else {
+        diaSemana = diaSemanaIngles-1;
+      }
   }
+  
 
   ilimunarDiaSemana();
 
@@ -311,7 +314,9 @@ void escuchandoPulsadores(){
   if(digitalRead(PUL_001)==LOW){
     Serial.println("Pulsado bt1");
     printDate(now);
-
+    
+  Serial.println(daysOfTheWeek[diaSemana]);
+  Serial.println(diaSemana);
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][0]);
   }
