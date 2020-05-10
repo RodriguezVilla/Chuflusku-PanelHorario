@@ -5,11 +5,14 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // Chuflusku - Panel Horario
 // Rubén Rodríguez Villa
+// v1.1.3 - 10/05/2020 -> Ordenar y simplifcar código.
 // V1.1.2 - 04/05/2020 -> Ajustes en comentarios. Corrección Domingo.
 // V1.1.1 - 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
 // V1.1.0 - 06/12/2019
 // V1.0.0 - 05/12/2019
 //
+//  Repositorio:
+//    - https://github.com/RodriguezVilla/Chuflusku-PanelHorario
 //
 //  Funciones:
 //    - Cada pulsador reproduce sonidos distinto que varia en función del día de la semana que sea.
@@ -20,10 +23,7 @@
 //    - Si utiliza un modulo reloj en el que no estan fijada la fecha y hora,
 //      ver instruccciones de línea 192.
 //
-//  Algunos sonidos de muestra se han obtenido de http://www.arasaac.org/creditos.php con la licencia 
-//  https://creativecommons.org/licenses/by-nc-sa/3.0/es/
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Para la gestión de la reproducción de audio utilizamos codigo de  http://www.dx.com/p/uart-control-serial-mp3-music-player-module-for-arduino-avr-arm-pic-blue-silver-342439#.VfHyobPh5z0
@@ -101,24 +101,31 @@ RTC_DS3231 rtc;
 ////////////////////////////////////////
 // Leds
 ////////////////////////////////////////
-#define TIRAS_LED_DIAS_SEMANA_PIN 2    // Digital IO pin connected to the NeoPixels.
+// Pines en los que conectamos los NeoPixels
+#define TIRAS_LED_DIAS_SEMANA_PIN 2    
 #define TIRAS_LED_DETECTOR_PIN 3
 
-#define TIRAS_LED_DIAS_SEMANA_CANTIDAD 7  // Designamos cuantos pixeles tenemos en nuestra cinta led RGB
-#define TIRAS_LED_DETECTOR_CATIDAD 13
+//Designamos cuantos pixeles/leds componten nuestra tira
+#define TIRAS_LED_DIAS_SEMANA_CANTIDAD 7  
+#define TIRAS_LED_DETECTOR_CANTIDAD 13
 
+//Objeto TirasLed
 Adafruit_NeoPixel tirasLedDiasSemana = Adafruit_NeoPixel(TIRAS_LED_DIAS_SEMANA_CANTIDAD, TIRAS_LED_DIAS_SEMANA_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel tirasLedDetector = Adafruit_NeoPixel(TIRAS_LED_DETECTOR_CATIDAD, TIRAS_LED_DETECTOR_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel tirasLedDetector = Adafruit_NeoPixel(TIRAS_LED_DETECTOR_CANTIDAD, TIRAS_LED_DETECTOR_PIN, NEO_GRB + NEO_KHZ800);
 
+//Colores TiraDetecto
 uint32_t offDetector =    tirasLedDetector.Color(0,0,0);
 uint32_t rojoOscuro =     tirasLedDetector.Color(130,0,0);
 uint32_t rojoPuro =       tirasLedDetector.Color(255,0,0);
+uint32_t magentaDet =     tirasLedDetector.Color(255,0,255);
+uint32_t magentaOscDet =  tirasLedDetector.Color(130,0,130);
 
-uint32_t offDias =        tirasLedDiasSemana.Color(0,0,0);
-uint32_t verdeOscuro =    tirasLedDiasSemana.Color(0,130,0);
-uint32_t verdePuro =      tirasLedDiasSemana.Color(0,255,0);
-uint32_t magenta =        tirasLedDiasSemana.Color(255,0,255);
-uint32_t magentaOscuro =  tirasLedDiasSemana.Color(130,0,130);
+//Colores TiraDiaSemana
+uint32_t offDias =           tirasLedDiasSemana.Color(0,0,0);
+uint32_t verdeOscuro =       tirasLedDiasSemana.Color(0,130,0);
+uint32_t verdePuro =         tirasLedDiasSemana.Color(0,255,0);
+uint32_t magentaDiaSem =     tirasLedDiasSemana.Color(255,0,255);
+uint32_t magentaOscDiaSem =  tirasLedDiasSemana.Color(130,0,130);
 
 ////////////////////////////////////////
 // Detector de movimiento
@@ -174,11 +181,17 @@ void setup()
   tirasLedDiasSemana.begin(); 
   tirasLedDetector.begin();
   
-  arrancandoLeds(magenta);
-  arrancandoLeds(magentaOscuro);
+  arrancandoLeds(magentaOscDet);
+  arrancandoLeds(magentaOscDiaSem);
 
   delay(500);
+
+  sendCommand(CMD_SEL_DEV, DEV_TF);
   
+  arrancandoLeds(offDetector);
+  arrancandoLeds(offDias);
+
+    
   if (!rtc.begin()) {
     Serial.println(F("Couldn't find RTC"));
     while (1);
@@ -189,15 +202,12 @@ void setup()
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 
+  ////////////////////////////////////////////////////////////////////
   // Si modulo de reloj no esta ajustado en fecha ni hora:
   // PASO1: descomentar la siguiente línea y cargar código al arduino
   //      rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // PASO2: Comentar la anterior línea y cargar código al arduino
-
-
-  sendCommand(CMD_SEL_DEV, DEV_TF);
-  arrancandoLeds(offDias);
-
+  ///////////////////////////////////////////////////////////////////
 }
 
 bool entroSoloUnaVez = false;
@@ -205,25 +215,29 @@ bool entroSoloUnaVez = false;
 void loop()
 {
 
-
+  comprobandoFecha();
+  ilimunarDiaSemana();
   escuchandoPulsadores();
   escuchandoPIR();
   
-  char c = ' ';
-
-  // If there a char on Serial call sendMP3Command to sendCommand
-  if ( Serial.available() )
-  {
-    c = Serial.read();
-    sendMP3Command(c);
-  }
-  // Check for the answer.
-  if (mp3.available())
-  {
-    Serial.println(decodeMP3Answer());
-  }
-
   delay(100);
+}
+
+//-----------------------------------
+// Rubén R. V.
+// 06/12/2019
+//-----------------------------------
+void comprobandoFecha(){
+  DateTime now = rtc.now();
+  if(now.dayOfTheWeek()!= (diaSemanaIngles)){
+    diaSemanaIngles = now.dayOfTheWeek();
+  }else{
+      if(diaSemanaIngles==0){
+        diaSemana = 6;  // Determino el caso para el domingo
+      }else {
+        diaSemana = diaSemanaIngles-1;
+      }
+  } 
 }
 
 //-----------------------------------
@@ -255,13 +269,11 @@ void arrancandoLeds(uint32_t color){
   }
 }
 void detectorLeds(uint32_t color){
-  for(int i=0; i<TIRAS_LED_DETECTOR_CATIDAD; i++){
+  for(int i=0; i<TIRAS_LED_DETECTOR_CANTIDAD; i++){
     tirasLedDetector.setPixelColor(i, color); // Brillo color
     tirasLedDetector.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
   }
 }
-
-
 
 //-----------------------------------
 // Rubén R. V.
@@ -277,35 +289,22 @@ void ilimunarDiaSemana(){
     tirasLedDiasSemana.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
   } 
 }
+
 //-----------------------------------
 // Rubén R. V.
 // 13/9/2019
 // Actualizaciónes: 05/12/2019, 06/12/2019
-// 04/05/2020 -> Corrección error del dia de la semana del domingo
 // 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
+// 04/05/2020 -> Corrección error del dia de la semana del domingo
+// 10/05/2020 -> Simplifico la función, pasando la comprobación de fecha a una nueva funón
 //-----------------------------------
 void escuchandoPulsadores(){
 
-  DateTime now = rtc.now();
-  if(now.dayOfTheWeek()!= (diaSemanaIngles)){
-    diaSemanaIngles = now.dayOfTheWeek();
-  }else{
-      if(diaSemanaIngles==0){
-        diaSemana = 6;  // Determino el caso para el domingo
-      }else {
-        diaSemana = diaSemanaIngles-1;
-      }
-  }
-  
-
-  ilimunarDiaSemana();
-
   int tmp = 210;
 
-  if(!entroSoloUnaVez){
-    
-  Serial.println(daysOfTheWeek[diaSemana]);
-  Serial.println(diaSemana);
+  if(!entroSoloUnaVez){  
+    Serial.println(daysOfTheWeek[diaSemana]);
+    Serial.println(diaSemana);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][0]);
     sendCommand(CMD_QUERY_VOLUME, 0x1E);
     entroSoloUnaVez = true;
@@ -313,10 +312,9 @@ void escuchandoPulsadores(){
   
   if(digitalRead(PUL_001)==LOW){
     Serial.println("Pulsado bt1");
-    printDate(now);
-    
-  Serial.println(daysOfTheWeek[diaSemana]);
-  Serial.println(diaSemana);
+    printDate();
+    Serial.println(daysOfTheWeek[diaSemana]);
+    Serial.println(diaSemana);
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][0]);
   }
@@ -324,46 +322,49 @@ void escuchandoPulsadores(){
   
   if(digitalRead(PUL_002)==LOW){
     Serial.println("Pulsado bt2");
-      printDate(now);
-
-     delay(tmp);
+    printDate();
+    delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][1]);
-
   }
   
   if(digitalRead(PUL_003)==LOW){
     Serial.println("Pulsado bt3");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][2]);
   }
     
   if(digitalRead(PUL_004)==LOW){
     Serial.println("Pulsado bt4");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][3]);
   }
      
   if(digitalRead(PUL_005)==LOW){
     Serial.println("Pulsado bt5");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][4]);
-
   } 
        
   if(digitalRead(PUL_006)==LOW){
     Serial.println("Pulsado bt6");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][5]);
   } 
       
   if(digitalRead(PUL_007)==LOW){
     Serial.println("Pulsado bt7");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][6]);
   }
      
   if(digitalRead(PUL_008)==LOW){
     Serial.println("Pulsado bt8");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][7]);
 
@@ -371,235 +372,63 @@ void escuchandoPulsadores(){
        
   if(digitalRead(PUL_009)==LOW){
     Serial.println("Pulsado bt9");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][8]);
   } 
 
   if(digitalRead(PUL_010)==LOW){
     Serial.println("Pulsado bt10");
+    printDate();
     delay(tmp);
     sendCommand(CMD_PLAY_FOLDER_FILE, url[diaSemana][9]);
   } 
 
 }
 
-
-/********************************************************************************/
-/*Function sendMP3Command: seek for a 'c' command and send it to MP3  */
-/*Parameter: c. Code for the MP3 Command, 'h' for help.                                                                                                         */
-/*Return:  void                                                                */
-
-void sendMP3Command(char c) {
-  switch (c) {
-    case '?':
-    case 'h':
-      Serial.println("HELP  ");
-      Serial.println(" p = Play");
-      Serial.println(" P = Pause");
-      Serial.println(" > = Next");
-      Serial.println(" < = Previous");
-      Serial.println(" + = Volume UP");
-      Serial.println(" - = Volume DOWN");
-      Serial.println(" c = Query current file");
-      Serial.println(" q = Query status");
-      Serial.println(" v = Query volume");
-      Serial.println(" x = Query folder count");
-      Serial.println(" t = Query total file count");
-      Serial.println(" 1 = Play folder 1");
-      Serial.println(" 2 = Play folder 2");
-      Serial.println(" 3 = Play folder 3");
-      Serial.println(" 4 = Play folder 4");
-      Serial.println(" 5 = Play folder 5");
-      Serial.println(" S = Sleep");
-      Serial.println(" W = Wake up");
-      Serial.println(" r = Reset");
-      break;
-
-
-    case 'p':
-      Serial.println("Play ");
-      sendCommand(CMD_PLAY, 0);
-      break;
-
-    case 'P':
-      Serial.println("Pause");
-      sendCommand(CMD_PAUSE, 0);
-      break;
-
-
-    case '>':
-      Serial.println("Next");
-      sendCommand(CMD_NEXT_SONG, 0);
-      sendCommand(CMD_PLAYING_N, 0x0000); // ask for the number of file is playing
-      break;
-
-
-    case '<':
-      Serial.println("Previous");
-      sendCommand(CMD_PREV_SONG, 0);
-      sendCommand(CMD_PLAYING_N, 0x0000); // ask for the number of file is playing
-      break;
-
-    case '+':
-      Serial.println("Volume Up");
-      sendCommand(CMD_VOLUME_UP, 0);
-      break;
-
-    case '-':
-      Serial.println("Volume Down");
-      sendCommand(CMD_VOLUME_DOWN, 0);
-      break;
-
-    case 'c':
-      Serial.println("Query current file");
-      sendCommand(CMD_PLAYING_N, 0);
-      break;
-      
-    case 'q':
-      Serial.println("Query status");
-      sendCommand(CMD_QUERY_STATUS, 0);
-      break;
-
-    case 'v':
-      Serial.println("Query volume");
-      sendCommand(CMD_QUERY_VOLUME, 0);
-      break;
-
-    case 'x':
-      Serial.println("Query folder count");
-      sendCommand(CMD_QUERY_FLDR_COUNT, 0);
-      break;
-
-    case 't':
-      Serial.println("Query total file count");
-      sendCommand(CMD_QUERY_TOT_TRACKS, 0);
-      break;
-
-    case '1':
-      Serial.println("Play folder 1");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0101);
-      break;
-
-    case '2':
-      Serial.println("Play folder 2");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0201);
- 
-      break;
-
-    case '3':
-      Serial.println("Play folder 3");
-      sendCommand(CMD_PLAY_FOLDER_FILE, 0x0301);
-      break;
-
-    case '4':
-      Serial.println("Play folder 4");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0401);
-      break;
-
-    case '5':
-      Serial.println("Play folder 5");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0501);
-      break;
-    case '6':
-      Serial.println("Play folder 6");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0601);
-      break;
-
-    case '7':
-      Serial.println("Play folder 7");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0701);
-      break;
-
-    case '8':
-      Serial.println("Play folder 8");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0801);
-      break;
-
-    case '9':
-      Serial.println("Play folder 9");
-      sendCommand(CMD_FOLDER_CYCLE, 0x0901);
-      break;
-
-    case 'S':
-      Serial.println("Sleep");
-      sendCommand(CMD_SLEEP_MODE, 0x00);
-      break;
-
-    case 'W':
-      Serial.println("Wake up");
-      sendCommand(CMD_WAKE_UP, 0x00);
-      break;
-
-    case 'r':
-      Serial.println("Reset");
-      sendCommand(CMD_RESET, 0x00);
-      break;
-  }
-}
-
-
-
 /********************************************************************************/
 /*Function decodeMP3Answer: Decode MP3 answer.                                  */
 /*Parameter:-void                                                               */
 /*Return: The                                                  */
-
 String decodeMP3Answer() {
   String decodedMP3Answer = "";
-
   decodedMP3Answer += sanswer();
-
   switch (ansbuf[3]) {
     case 0x3A:
       decodedMP3Answer += " -> Memory card inserted.";
       break;
-
     case 0x3D:
       decodedMP3Answer += " -> Completed play num " + String(ansbuf[6], DEC);
       break;
-
     case 0x40:
       decodedMP3Answer += " -> Error";
       break;
-
     case 0x41:
       decodedMP3Answer += " -> Data recived correctly. ";
       break;
-
     case 0x42:
       decodedMP3Answer += " -> Status playing: " + String(ansbuf[6], DEC);
       break;
-
     case 0x48:
       decodedMP3Answer += " -> File count: " + String(ansbuf[6], DEC);
       break;
-
     case 0x4C:
       decodedMP3Answer += " -> Playing: " + String(ansbuf[6], DEC);
       break;
-
     case 0x4E:
       decodedMP3Answer += " -> Folder file count: " + String(ansbuf[6], DEC);
       break;
-
     case 0x4F:
       decodedMP3Answer += " -> Folder count: " + String(ansbuf[6], DEC);
       break;
   }
-
   return decodedMP3Answer;
 }
-
-
-
-
-
 
 /********************************************************************************/
 /*Function: Send command to the MP3                                         */
 /*Parameter:-int8_t command                                                     */
 /*Parameter:-int16_ dat  parameter for the command                              */
-
 void sendCommand(int8_t command, int16_t dat)
 {
   delay(20);
@@ -620,60 +449,48 @@ void sendCommand(int8_t command, int16_t dat)
   Serial.println();
 }
 
-
-
 /********************************************************************************/
 /*Function: sbyte2hex. Returns a byte data in HEX format.                 */
 /*Parameter:- uint8_t b. Byte to convert to HEX.                                */
 /*Return: String                                                                */
-
-
 String sbyte2hex(uint8_t b)
 {
   String shex;
-
   shex = "0X";
-
   if (b < 16) shex += "0";
   shex += String(b, HEX);
   shex += " ";
   return shex;
 }
 
-
-
-
 /********************************************************************************/
 /*Function: sanswer. Returns a String answer from mp3 UART module.          */
 /*Parameter:- uint8_t b. void.                                                  */
 /*Return: String. If the answer is well formated answer.                        */
-
 String sanswer(void)
 {
   uint8_t i = 0;
   String mp3answer = "";
-
   // Get only 10 Bytes
   while (mp3.available() && (i < 10))
   {
     uint8_t b = mp3.read();
     ansbuf[i] = b;
     i++;
-
     mp3answer += sbyte2hex(b);
   }
-
   // if the answer format is correct.
   if ((ansbuf[0] == 0x7E) && (ansbuf[9] == 0xEF))
   {
     return mp3answer;
   }
-
   return "???: " + mp3answer;
 }
 
-void printDate(DateTime date)
+void printDate()
 {
+  DateTime date = rtc.now();
+
   Serial.print(date.year(), DEC);
   Serial.print('/');
   Serial.print(date.month(), DEC);

@@ -1,0 +1,10 @@
+La tarjeta SD debe estar formateada en FAT32.
+
+En la carpeta 01  se guardaran los sonidos del lunes, en la 02 el martes y as� sucesivamente.
+
+Los archivos mp3 empezaran 001, 002 ... hasta el 00A
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+Creditos Sonidos: sonidos de muestra se han obtenido de http://www.arasaac.org/creditos.php con la licencia 
+https://creativecommons.org/licenses/by-nc-sa/3.0/es/
+a execpción del sonido 001.mp3
