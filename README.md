@@ -12,10 +12,10 @@
  * 1 modulo DS3231
  * 2 resistencias de 330 Ohmios
  * 2 Tiras leds
- ** Una de 7 leds
- ⋅⋅* Otra de 13 leds
+    * Una de 7 leds
+    * Otra de 13 leds
  * Modulo de Serial player mp3
- ⋅⋅* (sera necesario añadir altavoz o auriculares)
+    * (sera necesario añadir altavoz o auriculares)
 ### Licencia ![licencia de Creative Commons Reconocimiento 4.0 Internacional](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)
 
  * Autores: ***José Manuel Agra Castro*** y ***Rubén Rodríguez Villa***.
