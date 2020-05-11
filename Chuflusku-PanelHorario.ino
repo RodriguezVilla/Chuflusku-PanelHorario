@@ -135,7 +135,7 @@ uint32_t magentaOscDet =  tirasLedDetector.Color(130,0,130);
 //Colores TiraFranjaHoraria
 uint32_t offFranjaHoraria         = tirasLedFranjaHoraria.Color(0,0,0);
 uint32_t azulFranjaHoraria        = tirasLedFranjaHoraria.Color(0,0,255);
-uint32_t azulOscranjaHoraria      = tirasLedFranjaHoraria.Color(0,0,130);
+uint32_t azulOscFranjaHoraria      = tirasLedFranjaHoraria.Color(0,0,130);
 uint32_t magentaFranjaHoraria     = tirasLedFranjaHoraria.Color(255,0,255);
 uint32_t magentaOscFranjaHoraria  = tirasLedFranjaHoraria.Color(130,0,130);
 
@@ -153,6 +153,24 @@ String daysOfTheWeek[7] = { "Lunes", "Martes", "Miercoles", "Jueves", "Viernes",
 String monthsNames[12] = { "Enero", "Febrero", "Marzo", "Abril", "Mayo",  "Junio", "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre" };
 int diaSemana = 0;
 int diaSemanaIngles = 0;
+
+//////////////////////////////////////////
+// Franjas Horarias
+//////////////////////////////////////////
+float intervalosHorarios [][3] = {{0.0, 9.5, 0.0},
+                              {9.5, 10.5, 1.0},
+                              {10.5, 11.5, 2.0},
+                              {11.5, 12.5, 3.0},
+                              {12.5, 13.5, 4.0},
+                              {13.5, 14.5, 5.0},
+                              {14.5, 23.99, 6.0}};
+bool interHorariosLeds [][55] = {{false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false},
+                              {true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true},
+                              {false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true},
+                              {false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false, true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true},
+                              {false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,true, true, true, true, true, true, true, true, true, true, true,true, true, true, true, true, true, true, true, true, true, true},
+                              {false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,true, true, true, true, true, true, true, true, true, true, true},
+                              {false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false,false, false, false, false, false, false, false, false, false, false, false}};                              
 
 ////////////////////////////////////////
 // URI directorios - sonidos 
@@ -198,7 +216,7 @@ void setup()
 
   delay(500);
 
-//  sendCommand(CMD_SEL_DEV, DEV_TF);
+  sendCommand(CMD_SEL_DEV, DEV_TF);
   
   arrancandoLeds(false);
   
@@ -216,7 +234,7 @@ void setup()
   ////////////////////////////////////////////////////////////////////
   // Si modulo de reloj no esta ajustado en fecha ni hora:
   // PASO1: descomentar la siguiente línea y cargar código al arduino
-  //      rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  //        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // PASO2: Comentar la anterior línea y cargar código al arduino
   ///////////////////////////////////////////////////////////////////
 }
@@ -229,11 +247,37 @@ void loop()
   ilimunarDiaSemana();
   escuchandoPulsadores();
   escuchandoPIR();
-  if(!esFinDeSemana()){
-    Serial.println("Es dia laborable");
+  for(int i=0; i<7; i++){
+        alarmaLeds(!esFinDeSemana(),franjaHoraria(intervalosHorarios[i][0], intervalosHorarios[i][1]), intervalosHorarios[i][2]);
   }
-  
+   
   delay(100);
+}
+
+//-----------------------------------
+// Rubén R. V.
+// 11/05/2020
+//-----------------------------------
+void alarmaLeds(bool diaLaboral,bool franja, float codigo){  
+  if(diaLaboral){
+    Serial.println("Es dia laborable");
+    printDate();
+    if(franja){
+      Serial.println("Codigo: ");
+      Serial.println(codigo);
+      for(int i=0; i<TIRAS_LED_FRANJA_HORARIA_CANTIDAD; i++){
+        if(interHorariosLeds[(int)codigo][i]){
+          tirasLedFranjaHoraria.setPixelColor(i, azulOscFranjaHoraria); 
+          tirasLedFranjaHoraria.show();
+          Serial.print("1, ");
+        }else{
+          tirasLedFranjaHoraria.setPixelColor(i, offFranjaHoraria); 
+          tirasLedFranjaHoraria.show();
+          Serial.print("0, ");
+        }    
+      }
+    }
+  }
 }
 
 //-----------------------------------
@@ -246,6 +290,17 @@ bool esFinDeSemana(){
   return retorno;
 }
 
+
+//-----------------------------------
+// Rubén R. V.
+// 11/05/2020
+//-----------------------------------
+bool franjaHoraria(float horaInicio, float horaFinal){
+  DateTime now = rtc.now();
+  float horaActual = now.hour()+now.minute()/60.0;
+  bool franjaHoraria = (horaActual > horaInicio && horaActual < horaFinal);
+  return franjaHoraria;
+}
 
 //-----------------------------------
 // Rubén R. V.
