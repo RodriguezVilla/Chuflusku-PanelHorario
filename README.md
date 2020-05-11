@@ -23,9 +23,3 @@
 
  * Autores: ***José Manuel Agra Castro*** y ***Rubén Rodríguez Villa***.
  * Esta obra está bajo una <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">licencia de Creative Commons Reconocimiento 4.0 Internacional ![licencia de Creative Commons Reconocimiento 4.0 Internacional](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)</a>.
- * Modulo de Serial player mp3
-    * (sera necesario añadir altavoz o auriculares)
-### Licencia ![licencia de Creative Commons Reconocimiento 4.0 Internacional](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)
-
- * Autores: ***José Manuel Agra Castro*** y ***Rubén Rodríguez Villa***.
- * Esta obra está bajo una <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">licencia de Creative Commons Reconocimiento 4.0 Internacional ![licencia de Creative Commons Reconocimiento 4.0 Internacional](https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png)</a>.
