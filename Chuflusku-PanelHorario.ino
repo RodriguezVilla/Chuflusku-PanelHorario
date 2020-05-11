@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // Chuflusku - Panel Horario
 // Rubén Rodríguez Villa
+// v2.0.0 - 11/05/2020 -> Se añade funcionalidad. En determinadas franjas horarias se iluminaran los leds para indicar el transcurso del tiempo
 // v1.1.3 - 10/05/2020 -> Ordenar y simplifcar código.
 // V1.1.2 - 04/05/2020 -> Ajustes en comentarios. Corrección Domingo.
 // V1.1.1 - 28/04/2020 -> Al entrar por primera vez reproduce el mp3 001**.mp3 (Archivo asociado al dia de la semana que corresponda)
@@ -17,7 +18,8 @@
 //  Funciones:
 //    - Cada pulsador reproduce sonidos distinto que varia en función del día de la semana que sea.
 //    - Una tira de leds indicara el día de la semana que es.
-//    - Un detector de movimiento activa tira de leds al percibir movimiento
+//    - Un detector de movimiento activa tira de leds al percibir movimiento.
+//    - En determinadas franjas horarias se iran encendiendo y apagando leds para indicar el transcurso del tiempo.
 //
 //  Consideraciones Previas:
 //    - Si utiliza un modulo reloj en el que no estan fijada la fecha y hora,
@@ -104,14 +106,24 @@ RTC_DS3231 rtc;
 // Pines en los que conectamos los NeoPixels
 #define TIRAS_LED_DIAS_SEMANA_PIN 2    
 #define TIRAS_LED_DETECTOR_PIN 3
+#define TIRAS_LED_FRANJA_HORARIA_PIN 5
 
 //Designamos cuantos pixeles/leds componten nuestra tira
 #define TIRAS_LED_DIAS_SEMANA_CANTIDAD 7  
 #define TIRAS_LED_DETECTOR_CANTIDAD 13
+#define TIRAS_LED_FRANJA_HORARIA_CANTIDAD 55
 
 //Objeto TirasLed
 Adafruit_NeoPixel tirasLedDiasSemana = Adafruit_NeoPixel(TIRAS_LED_DIAS_SEMANA_CANTIDAD, TIRAS_LED_DIAS_SEMANA_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel tirasLedDetector = Adafruit_NeoPixel(TIRAS_LED_DETECTOR_CANTIDAD, TIRAS_LED_DETECTOR_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel tirasLedFranjaHoraria = Adafruit_NeoPixel(TIRAS_LED_FRANJA_HORARIA_CANTIDAD, TIRAS_LED_FRANJA_HORARIA_PIN, NEO_GRB + NEO_KHZ800);
+
+//Colores TiraDiaSemana
+uint32_t offDias =           tirasLedDiasSemana.Color(0,0,0);
+uint32_t verdeOscuro =       tirasLedDiasSemana.Color(0,130,0);
+uint32_t verdePuro =         tirasLedDiasSemana.Color(0,255,0);
+uint32_t magentaDiaSem =     tirasLedDiasSemana.Color(255,0,255);
+uint32_t magentaOscDiaSem =  tirasLedDiasSemana.Color(130,0,130);
 
 //Colores TiraDetecto
 uint32_t offDetector =    tirasLedDetector.Color(0,0,0);
@@ -120,12 +132,12 @@ uint32_t rojoPuro =       tirasLedDetector.Color(255,0,0);
 uint32_t magentaDet =     tirasLedDetector.Color(255,0,255);
 uint32_t magentaOscDet =  tirasLedDetector.Color(130,0,130);
 
-//Colores TiraDiaSemana
-uint32_t offDias =           tirasLedDiasSemana.Color(0,0,0);
-uint32_t verdeOscuro =       tirasLedDiasSemana.Color(0,130,0);
-uint32_t verdePuro =         tirasLedDiasSemana.Color(0,255,0);
-uint32_t magentaDiaSem =     tirasLedDiasSemana.Color(255,0,255);
-uint32_t magentaOscDiaSem =  tirasLedDiasSemana.Color(130,0,130);
+//Colores TiraFranjaHoraria
+uint32_t offFranjaHoraria         = tirasLedFranjaHoraria.Color(0,0,0);
+uint32_t azulFranjaHoraria        = tirasLedFranjaHoraria.Color(0,0,255);
+uint32_t azulOscranjaHoraria      = tirasLedFranjaHoraria.Color(0,0,130);
+uint32_t magentaFranjaHoraria     = tirasLedFranjaHoraria.Color(255,0,255);
+uint32_t magentaOscFranjaHoraria  = tirasLedFranjaHoraria.Color(130,0,130);
 
 ////////////////////////////////////////
 // Detector de movimiento
@@ -180,17 +192,16 @@ void setup()
 
   tirasLedDiasSemana.begin(); 
   tirasLedDetector.begin();
+  tirasLedFranjaHoraria.begin();
   
-  arrancandoLeds(magentaOscDet);
-  arrancandoLeds(magentaOscDiaSem);
+  arrancandoLeds(true);
 
   delay(500);
 
-  sendCommand(CMD_SEL_DEV, DEV_TF);
+//  sendCommand(CMD_SEL_DEV, DEV_TF);
   
-  arrancandoLeds(offDetector);
-  arrancandoLeds(offDias);
-
+  arrancandoLeds(false);
+  
     
   if (!rtc.begin()) {
     Serial.println(F("Couldn't find RTC"));
@@ -214,18 +225,31 @@ bool entroSoloUnaVez = false;
 
 void loop()
 {
-
   comprobandoFecha();
   ilimunarDiaSemana();
   escuchandoPulsadores();
   escuchandoPIR();
+  if(!esFinDeSemana()){
+    Serial.println("Es dia laborable");
+  }
   
   delay(100);
 }
 
 //-----------------------------------
 // Rubén R. V.
-// 06/12/2019
+// 11/05/2020
+//-----------------------------------
+bool esFinDeSemana(){
+  bool retorno;
+  (diaSemana == (5 || 6 )) ? retorno=true : retorno=false;
+  return retorno;
+}
+
+
+//-----------------------------------
+// Rubén R. V.
+// 10/05/2020
 //-----------------------------------
 void comprobandoFecha(){
   DateTime now = rtc.now();
@@ -261,11 +285,27 @@ void escuchandoPIR(){
 // Rubén R. V.
 // 05/12/2019 - 06/12/1019
 //-----------------------------------
-void arrancandoLeds(uint32_t color){
-  for(int i=0; i<TIRAS_LED_DIAS_SEMANA_CANTIDAD; i++){
-    tirasLedDiasSemana.setPixelColor(i, color); // Brillo color
-    tirasLedDiasSemana.show();   // Mostramos y actualizamos el color del pixel de nuestra cinta led RGB
-    delay(100); // Pausa por un periodo de tiempo (en milisegundos).
+void arrancandoLeds(bool arranque){
+  if(arranque){
+    for(int i=0; i<7; i++){
+    tirasLedDiasSemana.setPixelColor(i, magentaOscDiaSem); 
+    tirasLedDiasSemana.show();
+    tirasLedDetector.setPixelColor(i, magentaOscDet); 
+    tirasLedDetector.show();
+    tirasLedFranjaHoraria.setPixelColor(i, magentaOscFranjaHoraria); 
+    tirasLedFranjaHoraria.show();  
+    delay(100); 
+    }
+  }else{
+    for(int i=0; i<7; i++){
+    tirasLedDiasSemana.setPixelColor(i, offDias); 
+    tirasLedDiasSemana.show();
+    tirasLedDetector.setPixelColor(i, offDetector); 
+    tirasLedDetector.show();
+    tirasLedFranjaHoraria.setPixelColor(i, offFranjaHoraria); 
+    tirasLedFranjaHoraria.show();  
+    delay(100); 
+    }
   }
 }
 void detectorLeds(uint32_t color){
